@@ -1,0 +1,2060 @@
+openapi: 3.0.3
+
+info:
+  title: Fednow processor action APIs
+  description: |
+    This is detailed documentation for simulator Fednow processor action APIs
+    
+    ## Successful Authentication is required to call following APIs.
+    
+    ## 🔐 Authentication Flow
+    
+    The API uses a secure two-step cookie-based authentication system:
+    
+    ### Step 1: Initial Login
+    **Endpoint**: `POST /authn/user-login/new-session`
+    - Send your user ID to initiate a new session
+    - Receive temporary authentication cookie (`bearer-token-temp-internal`)
+    - Cookie expires in 5 minutes for security
+    - OTP is sent to your registered email address
+    
+    ### Step 2: OTP Validation  
+    **Endpoint**: `POST /authn/login-otp-validation`
+    - Submit the OTP received via email
+    - Use the temporary cookie from Step 1
+    - Receive permanent authentication cookie (`bearer-token-perm-internal`)
+    - Cookie remains valid for 12 hours
+    
+    ### Step 3: API Access
+    - All protected endpoints automatically use the permanent cookie
+    - No need to manually handle authentication headers
+    - Swagger UI manages cookies automatically
+    
+    
+  version: 1.0.0
+  
+servers:
+- url: https://arthanova.cloudjiffy.net
+
+tags:
+  - name: Authentication
+    description: APIs for authentication and user session management
+  - name: Upload Transaction
+    description: APIs for uploading transactions to queue
+  - name: Generate System Message
+    description: APIs for generating various system messages and reports
+  - name: Initiate Transaction
+    description: APIs for initiating different types of financial transactions
+  - name: Transaction Action APIs
+    description: APIs for performing actions on existing transactions
+
+
+paths:
+  /authn/user-login/new-session:
+   post:
+     tags: [Authentication]
+     security: []  # No authentication required for login
+     summary: User Login - New Session
+     description: |
+       **Step 1 of Authentication Flow**
+       
+       Initiate new user session and send OTP for authentication.
+       This endpoint sets a temporary cookie that expires in 5 minutes.
+       
+       **Response Cookies Set:**
+       - `bearer-token-temp-internal`: Temporary JWT token (5 minutes)
+       - `SRVGROUP`: Server routing cookie
+     requestBody:
+       required: true
+       content:
+         application/json:
+           schema:
+             type: object
+             properties:
+               id:
+                 type: string
+                 description: User ID for authentication
+                 example: "YASH_SA"
+             required:
+               - id
+     responses:
+       '200':
+         description: OTP sent successfully for user authentication
+         headers:
+            Set-Cookie:
+              description: |
+                Two cookies are set:
+                1. `bearer-token-temp-internal` - Temporary JWT token (5 minutes)
+                2. `SRVGROUP` - Server routing cookie
+              schema:
+                type: string
+              examples:
+                temp_token:
+                  summary: "Temporary Token Cookie"
+                  value: "bearer-token-temp-internal=eyJhbGciOiJSUzI1NiI...; Path=/authn; Domain=arthanova.cloudjiffy.net; Max-Age=299; HttpOnly; Secure; SameSite=None"
+                server_group:
+                  summary: "Server Group Cookie"  
+                  value: "SRVGROUP=common; path=/; Secure; HttpOnly"
+         content:
+           application/json:
+             schema:
+               type: object
+               properties:
+                 businessStatusCode:
+                   type: integer
+                   example: 2
+                 emailId:
+                   type: string
+                   format: email
+                   example: "yash.a@arthavedh.com"
+                 httpResponseCode:
+                   type: integer
+                   example: 200
+                 message:
+                   type: string
+                   example: "OTP has been sent"
+                 name:
+                   type: string
+                   example: "Yash Adake"
+                 userId:
+                   type: string
+                   example: "YASH_SA"
+       '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechnicalError'
+       '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechnicalError'
+       '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechnicalError'
+
+  /authn/login-otp-validation:
+   post:
+     tags: [Authentication]
+     summary: OTP Validation
+     description: |
+       **Step 2 of Authentication Flow**
+       
+       Validate OTP for user login authentication using the temporary cookie from step 1.
+       This endpoint sets the permanent authentication cookie for all subsequent API calls.
+       
+       **Required Cookie:** `bearer-token-temp-internal` (from login step)
+       **Response Cookie Set:** `bearer-token-perm-internal` (permanent token)
+     security:
+        - tempCookieAuth: []  # Requires temporary token cookie
+     requestBody:
+       required: true
+       content:
+         application/json:
+           schema:
+             type: object
+             properties:
+               otp:
+                 type: string
+                 description: OTP received via email
+                 example: "878125"
+             required:
+               - otp
+     responses:
+       '200':
+         description: |
+           OTP validated successfully. Permanent authentication cookie is now set.
+           You can now use all other API endpoints.
+         headers:
+            Set-Cookie:
+              description: |
+                Permanent authentication cookies:
+                1. `bearer-token-perm-internal` - Permanent JWT token (12 hours)
+                2. `SRVGROUP` - Server routing cookie
+              schema:
+                type: string
+              examples:
+                perm_token:
+                  summary: "Permanent Token Cookie"
+                  value: "bearer-token-perm-internal=eyJhbGciOiJSUzI1NiI...; Path=/; Domain=arthanova.cloudjiffy.net; HttpOnly; Secure; SameSite=None"
+                server_group:
+                  summary: "Server Group Cookie"  
+                  value: "SRVGROUP=common; path=/; Secure; HttpOnly"
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/generic-response'
+             example:
+               businessStatusCode: 2
+               httpResponseCode: 200
+               message: "OTP has been validated"
+       '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechnicalError'
+       '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechnicalError'
+       '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechnicalError'
+
+  /clearing-reference/sign-out:
+   get:
+     tags: [Authentication]
+     summary: User Sign Out
+     description: |
+       Sign out user and terminate session. This will clear all authentication cookies.
+       After signing out, you'll need to authenticate again to use the APIs.
+     responses:
+       '200':
+         description: User signed out successfully
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/generic-response'
+             example:
+               businessStatusCode: 2
+               httpResponseCode: 200
+               message: "Successfully signed out"
+       '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechnicalError'
+       '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechnicalError'
+       '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechnicalError'
+               
+
+  /fednow-processor/put-data-on-queue:
+    post:
+      tags:
+        - Upload Transaction
+      summary: Upload Transaction API
+      description: Upload Transaction API
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                QueueName:
+                  type: string
+                  example: "BOFA_IN_FDN"
+                Data:
+                  type: string
+                  description: "XML envelope data as string"
+                  example: "<Envelope>\n  <AppHdr xmlns=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"urn:iso:std:iso:20022:tech:xsd:head.001.001.02 BusinessApplicationHeader_head_001_001_02_20210617.xsd\">\n    <Fr>\n      <FIId>\n        <FinInstnId>\n          <ClrSysMmbId>\n            <MmbId>021202337</MmbId>\n          </ClrSysMmbId>\n        </FinInstnId>\n      </FIId>\n    </Fr>\n    <To>\n      <FIId>\n        <FinInstnId>\n          <ClrSysMmbId>\n            <MmbId>021150706</MmbId>\n          </ClrSysMmbId>\n        </FinInstnId>\n      </FIId>\n    </To>\n    <BizMsgIdr>PACS0008BizMsgIdr2025052900000777</BizMsgIdr>\n    <MsgDefIdr>pacs.008.001.08</MsgDefIdr>\n    <MktPrctc>\n      <Regy>www2.swift.com/mystandards/#/group/Federal_Reserve_Financial_Services/FedNow_Service</Regy>\n      <Id>frb.fednow.01</Id>\n    </MktPrctc>\n    <CreDt>2025-05-29T05:55:00-04:00</CreDt>\n  </AppHdr>\n  <Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08 CustomerCreditTransfer_pacs_008_001_08.xsd\">\n    <FIToFICstmrCdtTrf>\n      <GrpHdr>\n        <MsgId>2025052900002220777</MsgId>\n        <CreDtTm>2025-05-29T10:55:26-04:00</CreDtTm>\n        <NbOfTxs>1</NbOfTxs>\n        <SttlmInf>\n          <SttlmMtd>CLRG</SttlmMtd>\n          <ClrSys>\n            <Cd>FDN</Cd>\n          </ClrSys>\n        </SttlmInf>\n      </GrpHdr>\n      <CdtTrfTxInf>\n        <PmtId>\n          <InstrId>Scenario01InstrId001</InstrId>\n          <EndToEndId>Scenario01EtoEId001</EndToEndId>\n          <UETR>84ecbcf2-3fca-42c3-91b8-0c521f7a78bd</UETR>\n        </PmtId>\n        <PmtTpInf>\n          <LclInstrm>\n            <Prtry>FDNA</Prtry>\n          </LclInstrm>\n          <CtgyPurp>\n            <Prtry>CONS</Prtry>\n          </CtgyPurp>\n        </PmtTpInf>\n        <IntrBkSttlmAmt Ccy=\"USD\">1000</IntrBkSttlmAmt>\n        <IntrBkSttlmDt>2025-05-29</IntrBkSttlmDt>\n        <ChrgBr>SLEV</ChrgBr>\n        <InstgAgt>\n          <FinInstnId>\n            <ClrSysMmbId>\n              <ClrSysId>\n                <Cd>USABA</Cd>\n              </ClrSysId>\n              <MmbId>021202337</MmbId>\n            </ClrSysMmbId>\n          </FinInstnId>\n        </InstgAgt>\n        <InstdAgt>\n          <FinInstnId>\n            <ClrSysMmbId>\n              <ClrSysId>\n                <Cd>USABA</Cd>\n              </ClrSysId>\n              <MmbId>231270353</MmbId>\n            </ClrSysMmbId>\n          </FinInstnId>\n        </InstdAgt>\n        <Dbtr>\n          <Nm>Individual A</Nm>\n          <PstlAdr>\n            <StrtNm>Dream Road</StrtNm>\n            <BldgNb>450</BldgNb>\n            <Room>141</Room>\n            <PstCd>60532</PstCd>\n            <TwnNm>Lisle</TwnNm>\n            <CtrySubDvsn>IL</CtrySubDvsn>\n            <Ctry>US</Ctry>\n          </PstlAdr>\n        </Dbtr>\n        <DbtrAcct>\n          <Id>\n            <Othr>\n              <Id>0031234567</Id>\n            </Othr>\n          </Id>\n        </DbtrAcct>\n        <DbtrAgt>\n          <FinInstnId>\n            <ClrSysMmbId>\n              <ClrSysId>\n                <Cd>USABA</Cd>\n              </ClrSysId>\n              <MmbId>231270353</MmbId>\n            </ClrSysMmbId>\n            <Nm>BankA</Nm>\n          </FinInstnId>\n        </DbtrAgt>\n        <CdtrAgt>\n          <FinInstnId>\n            <ClrSysMmbId>\n              <ClrSysId>\n                <Cd>USABA</Cd>\n              </ClrSysId>\n              <MmbId>021202337</MmbId>\n            </ClrSysMmbId>\n          </FinInstnId>\n        </CdtrAgt>\n        <Cdtr>\n          <Nm>Corporation B</Nm>\n          <PstlAdr>\n            <PstBx>6001</PstBx>\n            <PstCd>60197</PstCd>\n            <TwnNm>Carol Stream</TwnNm>\n            <CtrySubDvsn>IL</CtrySubDvsn>\n            <Ctry>US</Ctry>\n          </PstlAdr>\n        </Cdtr>\n        <CdtrAcct>\n          <Id>\n            <Othr>\n              <Id>56478374687</Id>\n            </Othr>\n          </Id>\n        </CdtrAcct>\n        <RmtInf>\n          <Strd>\n            <RfrdDocInf>\n              <Tp>\n                <CdOrPrtry>\n                  <Cd>CINV</Cd>\n                </CdOrPrtry>\n              </Tp>\n              <Nb>INV34563</Nb>\n              <RltdDt>2025-04-01</RltdDt>\n            </RfrdDocInf>\n          </Strd>\n        </RmtInf>\n      </CdtTrfTxInf>\n    </FIToFICstmrCdtTrf>\n  </Document>\n</Envelope>\n"
+              required:
+                - QueueName
+                - Data
+      responses:
+        '200':
+          description: Message successfully queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-response'
+              example:
+               businessStatusCode: 2
+               httpResponseCode: 200
+               message: "Message put on queue Successfully"
+
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+        '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+
+  /fednow-processor/admi004-broadcast-message-request:
+   post:
+     tags:
+      - Generate System Message
+     summary: Generate System Message
+     description: Generate System Message with different message sub types
+     requestBody:
+       required: true
+       content:
+         application/json:
+           schema:
+             type: object
+             properties:
+               tenantId:
+                 type: string
+                 example: "T00001"
+               clearingSystemId:
+                 type: string
+                 example: "FDN"
+               messageSubType:
+                 type: string
+                 enum: ["ROLL", "EXTN", "FPOF", "ADHC", "FPON", "FPRE", "SITL", "FNKY"]
+                 example: "ROLL"
+               sendToAll:
+                 type: boolean
+                 example: true
+               entityId:
+                 type: string
+                 description: "Required for FPOF, FPON, FPRE message sub types"
+                 example: "BOFA"
+               additionalInfo:
+                 type: string
+                 description: "Required for ADHC message sub type"
+                 example: "Additional Details"
+               productCode:
+                 type: string
+                 description: "Required for SITL message sub type"
+                 example: "FDNA"
+               amount:
+                 type: string
+                 description: "Required for SITL message sub type"
+                 example: "10000"
+             required:
+               - tenantId
+               - clearingSystemId
+               - messageSubType
+               - sendToAll
+           examples:
+             system_rollover:
+               summary: "System Rollover (ROLL)"
+               value:
+                 tenantId: "T00001"
+                 clearingSystemId: "FDN"
+                 messageSubType: "ROLL"
+                 sendToAll: true
+             system_extension:
+               summary: "System Extension (EXTN)"
+               value:
+                 tenantId: "T00001"
+                 clearingSystemId: "FDN"
+                 messageSubType: "EXTN"
+                 sendToAll: true
+             participant_offline:
+               summary: "Participant Offline (FPOF)"
+               value:
+                 tenantId: "T00001"
+                 clearingSystemId: "FDN"
+                 messageSubType: "FPOF"
+                 sendToAll: true
+                 entityId: "BOFA"
+             ad_hoc:
+               summary: "Ad Hoc (ADHC)"
+               value:
+                 tenantId: "T00001"
+                 clearingSystemId: "FDN"
+                 messageSubType: "ADHC"
+                 sendToAll: true
+                 additionalInfo: "Additional Details"
+             participant_online:
+               summary: "Participant Online (FPON)"
+               value:
+                 tenantId: "T00001"
+                 clearingSystemId: "FDN"
+                 messageSubType: "FPON"
+                 sendToAll: true
+                 entityId: "BOFA"
+             participant_reactivation:
+               summary: "Participant Reactivation (FPRE)"
+               value:
+                 tenantId: "T00001"
+                 clearingSystemId: "FDN"
+                 messageSubType: "FPRE"
+                 sendToAll: false
+                 entityId: "BOFA"
+             transaction_limit_change:
+               summary: "Transaction Limit Change (SITL)"
+               value:
+                 tenantId: "T00001"
+                 clearingSystemId: "FDN"
+                 messageSubType: "SITL"
+                 sendToAll: true
+                 productCode: "FDNA"
+                 amount: "10000"
+             fednow_keys:
+               summary: "Fednow Keys (FNKY)"
+               value:
+                 tenantId: "T00001"
+                 clearingSystemId: "FDN"
+                 messageSubType: "FNKY"
+                 sendToAll: true
+     responses:
+       '200':
+         description: Message processed successfully
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/generic-response'
+             examples:
+               roll_response:
+                 summary: "ROLL Response"
+                 value:
+                   businessStatusCode: 2
+                   httpResponseCode: 200
+                   message: "Message ROLL processed successfully"
+               extn_response:
+                 summary: "EXTN Response"
+                 value:
+                   businessStatusCode: 2
+                   httpResponseCode: 200
+                   message: "Message EXTN processed successfully"
+               fpof_response:
+                 summary: "FPOF Response"
+                 value:
+                   businessStatusCode: 2
+                   httpResponseCode: 200
+                   message: "Message FPOF processed successfully"
+               adhc_response:
+                 summary: "ADHC Response"
+                 value:
+                   businessStatusCode: 2
+                   httpResponseCode: 200
+                   message: "Message ADHC processed successfully"
+               fpon_response:
+                 summary: "FPON Response"
+                 value:
+                   businessStatusCode: 2
+                   httpResponseCode: 200
+                   message: "Message FPON processed successfully"
+               fpre_response:
+                 summary: "FPRE Response"
+                 value:
+                   businessStatusCode: 2
+                   httpResponseCode: 200
+                   message: "Message FPRE processed successfully"
+               sitl_response:
+                 summary: "SITL Response"
+                 value:
+                   businessStatusCode: 2
+                   httpResponseCode: 200
+                   message: "Message SITL processed successfully"
+               fnky_response:
+                 summary: "FNKY Response"
+                 value:
+                   businessStatusCode: 2
+                   httpResponseCode: 200
+                   message: "Message FNKY processed successfully"
+       '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+       '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+       '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /fednow-processor/generate-camt052-report:
+   post:
+     tags:
+      - Generate System Message
+     summary: Generate System Message
+     description: Generate reconciliation messages with different message sub types for CAMT052 reports
+     requestBody:
+       required: true
+       content:
+         application/json:
+           schema:
+             type: object
+             properties:
+               tenantId:
+                 type: string
+                 example: "T00001"
+               clearingSystemId:
+                 type: string
+                 example: "FDN"
+               messageSubType:
+                 type: string
+                 enum: ["AATR", "CATR", "AADR", "CADR"]
+                 example: "AATR"
+             required:
+               - tenantId
+               - clearingSystemId
+               - messageSubType
+           examples:
+             account_activity_total:
+               summary: "Account Activity Total Reports (AATR)"
+               value:
+                 tenantId: "T00001"
+                 clearingSystemId: "FDN"
+                 messageSubType: "AATR"
+             correspondent_account_activity_total:
+               summary: "Correspondent Account Activity Total Reports (CATR)"
+               value:
+                 tenantId: "T00001"
+                 clearingSystemId: "FDN"
+                 messageSubType: "CATR"
+             account_activity_details:
+               summary: "Account Activity Details Report (AADR)"
+               value:
+                 tenantId: "T00001"
+                 clearingSystemId: "FDN"
+                 messageSubType: "AADR"
+             correspondent_account_activity_details:
+               summary: "Correspondent Account Activity Details Reports (CADR)"
+               value:
+                 tenantId: "T00001"
+                 clearingSystemId: "FDN"
+                 messageSubType: "CADR"
+     responses:
+       '200':
+         description: CAMT052 report processed successfully
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/generic-response'
+             examples:
+               aatr_response:
+                 summary: "AATR Response"
+                 value:
+                   businessStatusCode: 2
+                   httpResponseCode: 200
+                   message: "Camt052 AATR  processed successfully"
+               catr_response:
+                 summary: "CATR Response"
+                 value:
+                   businessStatusCode: 2
+                   httpResponseCode: 200
+                   message: "Camt052 CATR  processed successfully"
+               aadr_response:
+                 summary: "AADR Response"
+                 value:
+                   businessStatusCode: 2
+                   httpResponseCode: 200
+                   message: "Camt052 AADR  processed successfully"
+               cadr_response:
+                 summary: "CADR Response"
+                 value:
+                   businessStatusCode: 2
+                   httpResponseCode: 200
+                   message: "Camt052 CADR  processed successfully"
+
+       '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+       '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+       '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+            
+  /fednow-processor/admi998-report:
+   post:
+     tags:
+      - Generate System Message
+     summary: Generate System Message
+     description: Generate reconciliation message for FedNow Participant File (ADMI998 report)
+     requestBody:
+       required: true
+       content:
+         application/json:
+           schema:
+             type: object
+             properties:
+               tenantId:
+                 type: string
+                 example: "T00001"
+               clearingSystemId:
+                 type: string
+                 example: "FDN"
+             required:
+               - tenantId
+               - clearingSystemId
+     responses:
+       '200':
+         description: ADMI998 report processed successfully
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/generic-response'
+             example:
+               businessStatusCode: 2
+               httpResponseCode: 200
+               message: "Admi998Unsolicited processed successfully"
+
+       '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+       '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+       '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /fednow-processor/generate-value-messages:
+   post:
+     tags:
+      - Initiate Transaction
+     summary: Initiate Transaction API
+     description: Initiate transactions with different message types (pacs.008.001.08, pacs.009.001.08, pain.013.001.07)
+     requestBody:
+       required: true
+       content:
+         application/json:
+           schema:
+             type: object
+             properties:
+               clearingSystemId:
+                 type: string
+                 example: "FDN"
+               messageType:
+                 type: string
+                 enum: ["pacs.008.001.08", "pacs.009.001.08", "pain.013.001.07"]
+                 example: "pacs.008.001.08"
+               sender:
+                 type: string
+                 example: "021000021"
+               receiver:
+                 type: string
+                 example: "026009593"
+               data:
+                 type: object
+                 description: "Message-specific data with XPath-like keys"
+             required:
+               - clearingSystemId
+               - messageType
+               - sender
+               - receiver
+               - data
+           examples:
+             pacs_008_001_08:
+               summary: "Pacs.008.001.08 Message"
+               value:
+                 clearingSystemId: "FDN"
+                 messageType: "pacs.008.001.08"
+                 sender: "021000021"
+                 receiver: "026009593"
+                 data:
+                   "/Document/FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/InstrId":
+                     value: "I3883dahdbh"
+                   "/Document/FIToFICstmrCdtTrf/CdtTrfTxInf/PmtId/EndToEndId":
+                     value: "E927NSBFUIGI"
+                   "/Document/FIToFICstmrCdtTrf/CdtTrfTxInf/PmtTpInf/CtgyPurp/Prtry":
+                     value: "BIZZ"
+                   "/Document/FIToFICstmrCdtTrf/CdtTrfTxInf/IntrBkSttlmAmt":
+                     value: "100000"
+                   "/Document/FIToFICstmrCdtTrf/CdtTrfTxInf/ChrgBr":
+                     value: "SLEV"
+                   "/Document/FIToFICstmrCdtTrf/CdtTrfTxInf/InstgAgt/FinInstnId/ClrSysMmbId/MmbId":
+                     value: "021000021"
+                   "/Document/FIToFICstmrCdtTrf/CdtTrfTxInf/InstdAgt/FinInstnId/ClrSysMmbId/MmbId":
+                     value: "026009593"
+                   "/Document/FIToFICstmrCdtTrf/CdtTrfTxInf/Dbtr/Nm":
+                     value: "John Doe"
+                   "/Document/FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAcct/Id/Othr/Id":
+                     value: "567876543"
+                   "/Document/FIToFICstmrCdtTrf/CdtTrfTxInf/DbtrAgt/FinInstnId/ClrSysMmbId/MmbId":
+                     value: "111222333"
+                   "/Document/FIToFICstmrCdtTrf/CdtTrfTxInf/Cdtr/Nm":
+                     value: "Jane Smith"
+                   "/Document/FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAcct/Id/Othr/Id":
+                     value: "567876543"
+                   "/Document/FIToFICstmrCdtTrf/CdtTrfTxInf/CdtrAgt/FinInstnId/ClrSysMmbId/MmbId":
+                     value: "567876543"
+                   "/Document/FIToFICstmrCdtTrf/CdtTrfTxInf/Purp/Prtry":
+                     value: "BankLoanDelayedDrawFunding"
+             pacs_009_001_08:
+               summary: "Pacs.009.001.08 Message"
+               value:
+                 clearingSystemId: "FDN"
+                 messageType: "pacs.009.001.08"
+                 sender: "021000021"
+                 receiver: "026009593"
+                 data:
+                   "/Document/FICdtTrf/CdtTrfTxInf/PmtId/InstrId":
+                     value: "11111111111"
+                   "/Document/FICdtTrf/CdtTrfTxInf/PmtId/EndToEndId":
+                     value: "222222222"
+                   "/Document/FICdtTrf/CdtTrfTxInf/PmtTpInf/CtgyPurp/Cd":
+                     value: "BKDF"
+                   "/Document/FICdtTrf/CdtTrfTxInf/IntrBkSttlmAmt":
+                     value: "100000"
+                   "/Document/FICdtTrf/CdtTrfTxInf/InstgAgt/FinInstnId/ClrSysMmbId/MmbId":
+                     value: "021000021"
+                   "/Document/FICdtTrf/CdtTrfTxInf/InstdAgt/FinInstnId/ClrSysMmbId/MmbId":
+                     value: "026009593"
+                   "/Document/FICdtTrf/CdtTrfTxInf/Dbtr/FinInstnId/ClrSysMmbId/MmbId":
+                     value: "111222333"
+                   "/Document/FICdtTrf/CdtTrfTxInf/Cdtr/FinInstnId/ClrSysMmbId/MmbId":
+                     value: "567876543"
+             pain_013_001_07:
+               summary: "Pain.013.001.07 Message"
+               value:
+                 clearingSystemId: "FDN"
+                 messageType: "pain.013.001.07"
+                 sender: "021000021"
+                 receiver: "026009593"
+                 data:
+                   "/Document/CdtrPmtActvtnReq/GrpHdr/InitgPty/Nm":
+                     value: "Adam Smith"
+                   "/Document/CdtrPmtActvtnReq/PmtInf/Dbtr/Nm":
+                     value: "Travis Head"
+                   "/Document/CdtrPmtActvtnReq/PmtInf/DbtrAcct/Id/Othr/Id":
+                     value: "987634567"
+                   "/Document/CdtrPmtActvtnReq/PmtInf/DbtrAgt/FinInstnId/ClrSysMmbId/MmbId":
+                     value: "026009593"
+                   "/Document/CdtrPmtActvtnReq/PmtInf/CdtTrfTx/PmtTpInf/CtgyPurp/Prtry":
+                     value: "BIZZ"
+                   "/Document/CdtrPmtActvtnReq/PmtInf/CdtTrfTx/PmtId/EndToEndId":
+                     value: "EndtoEnd"
+                   "/Document/CdtrPmtActvtnReq/PmtInf/CdtTrfTx/PmtId/InstrId":
+                     value: "InstrId"
+                   "/Document/CdtrPmtActvtnReq/PmtInf/CdtTrfTx/Amt/InstdAmt":
+                     value: "1500000"
+                   "/Document/CdtrPmtActvtnReq/PmtInf/CdtTrfTx/Cdtr/Nm":
+                     value: "Jane Smith"
+                   "/Document/CdtrPmtActvtnReq/PmtInf/CdtTrfTx/CdtrAcct/Id/Othr/Id":
+                     value: "567876543"
+                   "/Document/CdtrPmtActvtnReq/PmtInf/CdtTrfTx/CdtrAgt/FinInstnId/ClrSysMmbId/MmbId":
+                     value: "021000021"
+                   "/Document/CdtrPmtActvtnReq/PmtInf/CdtTrfTx/Purp/Cd":
+                     value: "BKDF"
+     responses:
+       '200':
+         description: Message successfully queued
+         content:
+           application/json:
+             schema:
+               type: object
+               properties:
+                 businessStatusCode:
+                   type: integer
+                   example: 2
+                 httpResponseCode:
+                   type: integer
+                   example: 200
+                 message:
+                   type: string
+                   example: "Message put on queue Successfully"
+                 messageId:
+                   type: string
+                   example: "20250530021000021DLRE6GHOVOZCT5Q"
+               required:
+                 - businessStatusCode
+                 - httpResponseCode
+                 - message
+                 - messageId
+
+       '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+       '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+       '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /fednow-processor/admi007-api:
+   post:
+     tags:
+      - Transaction Action APIs
+     summary: ACK Generation on Pain 013, Camt 056, Camt 055, Camt 026, Camt 029, Pacs 028, Pain 014, Camt 028 API
+     description: Generate acknowledgment for various message types (Pain 013, Camt 056, Camt 055, Camt 026, Camt 029, Pacs 028, Pain 014, Camt 028)
+     requestBody:
+       required: true
+       content:
+         application/json:
+           schema:
+             type: object
+             properties:
+               transactionId:
+                 type: string
+                 example: "transactionId"
+             required:
+               - transactionId
+     responses:
+       '200':
+         description: ADMI007 acknowledgment successfully queued
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/generic-response'
+             example:
+               businessStatusCode: 2
+               httpResponseCode: 200
+               message: "Admi007 successfully put on MQ"
+       '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+       '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+       '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /fednow-processor/admi002-api:
+   post:
+     tags:
+      - Transaction Action APIs
+     summary: NACK Generation on Pain 013, Camt 056, Camt 055, Camt 026, Camt 029, Pacs 028, Pain 014, Camt 028 API
+     description: Generate negative acknowledgment for various message types (Pain 013, Camt 056, Camt 055, Camt 026, Camt 029, Pacs 028, Pain 014, Camt 028)
+     requestBody:
+       required: true
+       content:
+         application/json:
+           schema:
+             type: object
+             properties:
+               transactionId:
+                 type: string
+                 example: "TX25053000015054"
+               returnReasonCode:
+                 type: string
+                 example: "negative respone"
+             required:
+               - transactionId
+               - returnReasonCode
+     responses:
+       '200':
+         description: ADMI002 negative acknowledgment successfully queued
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/generic-response'
+             example:
+               businessStatusCode: 2
+               httpResponseCode: 200
+               message: "Admi002 successfully put on MQ"
+
+       '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+       '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+       '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /fednow-processor/pacs002-response:
+   post:
+     tags:
+      - Transaction Action APIs
+     summary: ACK/NACK Generation on Pacs 008, Pacs 009, Pacs 004 API
+     description: Generate acknowledgment or negative acknowledgment for Pacs 008, Pacs 009, Pacs 004 messages
+     requestBody:
+       required: true
+       content:
+         application/json:
+           schema:
+             type: object
+             properties:
+               transactionId:
+                 type: string
+                 example: "TX25060300002163"
+               transactionStatusCode:
+                 type: string
+                 example: "ACTC"
+               returnReasonCode:
+                 type: string
+                 example: "A100"
+               returnReasonDesc:
+                 type: string
+                 example: "Invalid Account No"
+             required:
+               - transactionId
+               - transactionStatusCode
+     responses:
+       '200':
+         description: PACS002 response successfully queued
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/generic-response'
+             example:
+               businessStatusCode: 2
+               httpResponseCode: 200
+               message: "Return Request successfully put on MQ"
+
+       '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+       '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+       '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /fednow-processor/camt056-return-request:
+    post:
+      tags:
+        - Transaction Action APIs
+      summary: Return Request on Pacs 008 API
+      description: Generate return request for Pacs 008 transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionId:
+                  type: string
+                  example: "TX25053000015076"
+                returnReasonCode:
+                  type: string
+                  example: "AM09"
+                returnReasonDesc:
+                  type: string
+                  example: "Wrong Amount AGNT Requested by Agent"
+              required:
+                - transactionId
+                - returnReasonCode
+                - returnReasonDesc
+      responses:
+        '200':
+          description: CAMT056 return request successfully queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-response'
+              example:
+                businessStatusCode: 2
+                httpResponseCode: 200
+                message: "Return Request successfully put on MQ"
+
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+        '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /fednow-processor/pacs004-payment-return-request:
+    post:
+      tags:
+        - Transaction Action APIs
+      summary: Payment Return Request on Pacs 008 API
+      description: Generate payment return request for Pacs 008 transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionId:
+                  type: string
+                  example: "TX25053000015076"
+                amount:
+                  type: string
+                  example: "5000.00"
+                returnReasonCode:
+                  type: string
+                  example: "AC03"
+                returnReasonDesc:
+                  type: string
+                  example: "Invalid Creditor Account Number"
+              required:
+                - transactionId
+                - amount
+                - returnReasonCode
+                - returnReasonDesc
+      responses:
+        '200':
+          description: PACS004 payment return request successfully queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-response'
+              example:
+                businessStatusCode: 2
+                httpResponseCode: 200
+                message: "Return Request successfully put on MQ"
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+        '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /fednow-processor/pacs028-status-request-api:
+    post:
+      tags:
+        - Transaction Action APIs
+      summary: Payment Status Request API (Pacs 008, Pacs 004)
+      description: Generate payment status request for Pacs 028 and Pacs 004 transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionId:
+                  type: string
+                  description: "Transaction identifier"
+                  example: "TX25053000015076"
+              required:
+                - transactionId
+            examples:
+              pacs_008_status_request:
+                summary: "Payment Status Request on Pacs 008"
+                value:
+                  transactionId: "TX25053000015076"
+              pacs_004_status_request:
+                summary: "Payment Status Request on Pacs 004"
+                value:
+                  transactionId: "TX25053000015069"
+      responses:
+        '200':
+          description: PACS008 status request successfully queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-response'
+              example:
+                businessStatusCode: 2
+                httpResponseCode: 200
+                message: "Return Request successfully put on MQ"
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+        '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /fednow-processor/camt026-return-request:
+   post: 
+     tags:
+      - Transaction Action APIs
+     summary: Information Request API (Pacs 008, Pacs 004, Pain 013)
+     description: Generate information request for different message types - Pacs 008, Pacs 004, and Pain 013 transactions
+     requestBody:
+       required: true
+       content:
+         application/json:
+           schema:
+             type: object
+             properties:
+               transactionId:
+                 type: string
+                 description: "Transaction identifier"
+                 example: "TX25053000015076"
+               informationReqType:
+                 type: string
+                 description: "Type of information request"
+                 example: "Missing Information"
+               informationType:
+                 type: string
+                 description: "Required for Pacs 008 and Pacs 004 requests"
+                 example: "AMLReq"
+               amlReq:
+                 type: boolean
+                 description: "Required for Pacs 008 AML requests"
+                 example: true
+               infData:
+                 type: array
+                 description: "Required for Pacs 004 missing information requests"
+                 items:
+                   type: object
+                   properties:
+                     cd:
+                       type: string
+                       example: "MS02"
+                     addInf:
+                       type: string
+                       example: ""
+             required:
+               - transactionId
+               - informationReqType
+           examples:
+             pacs_008_aml_request:
+               summary: "Information Request on Pacs 008 (AML)"
+               value:
+                 transactionId: "TX25053000015076"
+                 informationReqType: "Missing Information"
+                 informationType: "AMLReq"
+                 amlReq: true
+             pacs_004_missing_info:
+               summary: "Information Request on Pacs 004 (Missing Information)"
+               value:
+                 transactionId: "TX25053000015069"
+                 informationReqType: "Missing Information"
+                 informationType: "MssngInf"
+                 infData:
+                   - cd: "MS02"
+                     addInf: ""
+                   - cd: "MS03"
+                     addInf: ""
+                   - cd: "MS04"
+                     addInf: ""
+             pain_013_duplicate:
+               summary: "Information Request on Pain 013 (Possible Duplicate)"
+               value:
+                 transactionId: "TX25053000015072"
+                 informationReqType: "Possible Duplicate"
+     responses:
+       '200':
+         description: CAMT026 information request successfully queued
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/generic-response'
+             example:
+               businessStatusCode: 2
+               httpResponseCode: 200
+               message: "Return Request successfully put on MQ"
+
+       '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+       '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+       '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /fednow-processor/camt029-ack-response:
+    post:
+      tags:
+        - Transaction Action APIs
+      summary: Return Request Response on Camt 056 API
+      description: Generate return request response for Camt 056 messages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionId:
+                  type: string
+                  example: "TX25053000015067"
+                returnReasonCode:
+                  type: string
+                  example: "CNCL"
+                returnReasonDesc:
+                  type: string
+                  example: ""
+                returnReasonSubCode:
+                  type: string
+                  example: ""
+                amount:
+                  type: string
+                  example: "50000"
+              required:
+                - transactionId
+                - returnReasonCode
+      responses:
+        '200':
+          description: CAMT029 ACK response successfully queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-response'
+              example:
+                businessStatusCode: 2
+                httpResponseCode: 200
+                message: "Return Request successfully put on MQ"
+
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+        '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /fednow-processor/camt029-info-response:
+    post:
+      tags:
+        - Transaction Action APIs
+      summary: Information Request Response on Camt 026 API
+      description: Generate information request response for Camt 026 messages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionId:
+                  type: string
+                  example: "TX25053000015051"
+                returnReasonCode:
+                  type: string
+                  example: "INFO"
+                endtoendid:
+                  type: string
+                  example: ""
+                txid:
+                  type: string
+                  example: ""
+                returnReasonDesc:
+                  type: string
+                  example: "NCkmwefmwl"
+                amount:
+                  type: string
+                  example: ""
+              required:
+                - transactionId
+                - returnReasonCode
+      responses:
+        '200':
+          description: CAMT029 info response successfully queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-response'
+              example:
+                businessStatusCode: 2
+                httpResponseCode: 200
+                message: "Return Request successfully put on MQ"
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+        '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+
+  /fednow-processor/camt055-rpf-cancellation-request-api:
+    post:
+      tags:
+        - Transaction Action APIs
+      summary: RPF cancellation Request on Pain 013 API
+      description: Generate RPF cancellation request for Pain 013 transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionId:
+                  type: string
+                  example: "TX25053000015072"
+                returnReasonCode:
+                  type: string
+                  example: "AM09"
+                returnReasonDesc:
+                  type: string
+                  example: "Wrong Amount AGNT Requested by Agent"
+              required:
+                - transactionId
+                - returnReasonCode
+                - returnReasonDesc
+      responses:
+        '200':
+          description: CAMT055 RPF cancellation request successfully queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-response'
+              example:
+                businessStatusCode: 2
+                httpResponseCode: 200
+                message: "Return Request successfully put on MQ"
+
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+        '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /fednow-processor/pain014-drawdown-response-api:
+    post:
+      tags:
+        - Transaction Action APIs
+      summary: Drawdown Response on Pain 013 API
+      description: Generate drawdown response for Pain 013 transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionId:
+                  type: string
+                  example: "TX25053000015072"
+                returnReasonCode:
+                  type: string
+                  example: "ACTC"
+                returnReasonDesc:
+                  type: string
+                  example: ""
+                returnReasonSubCode:
+                  type: string
+                  example: ""
+                amount:
+                  type: string
+                  example: "234567"
+              required:
+                - transactionId
+                - returnReasonCode
+      responses:
+        '200':
+          description: PAIN014 drawdown response successfully queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-response'
+              example:
+                businessStatusCode: 2
+                httpResponseCode: 200
+                message: "Return Request successfully put on MQ"
+
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+        '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /fednow-processor/camt028-structured-remitance-info:
+    post:
+      tags:
+        - Transaction Action APIs
+      summary: Additional Payment Information on Camt 029 API
+      description: Generate additional payment information for Camt 029 transactions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionId:
+                  type: string
+                  example: "TX25053000015044"
+                returnReasonCode:
+                  type: string
+                  example: "CNFA"
+                returnReasonDesc:
+                  type: string
+                  example: "Credit Note Related To Financial Adjustment"
+              required:
+                - transactionId
+                - returnReasonCode
+                - returnReasonDesc
+      responses:
+        '200':
+          description: CAMT028 structured remittance info successfully queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-response'
+              example:
+                businessStatusCode: 2
+                httpResponseCode: 200
+                message: "Return Request successfully put on MQ"
+
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+        '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /fednow-processor/camt029-rpf-response:
+    post:
+      tags:
+        - Transaction Action APIs
+      summary: RPF Cancellation Request Response API
+      description: Generate RPF cancellation request response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transactionId:
+                  type: string
+                  example: "TX25032500001443"
+                returnReasonCode:
+                  type: string
+                  example: "CNCL"
+                returnReasonDesc:
+                  type: string
+                  example: "OK"
+                returnReasonSubCode:
+                  type: string
+                  example: "ACO3"
+                amount:
+                  type: string
+                  example: "10000"
+              required:
+                - transactionId
+                - returnReasonCode
+      responses:
+        '200':
+          description: CAMT029 RPF response successfully queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-response'
+              example:
+                businessStatusCode: 2
+                httpResponseCode: 200
+                message: "Return Request successfully put on MQ"
+
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+        '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /clearing-reference/generate-certification-report:
+    post:
+      tags:
+        - Transaction Action APIs
+      summary: Certification Report Generation API
+      description: Generate certification report for specified scenarios and time period
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tenantId:
+                  type: string
+                  example: "T00001"
+                entityId:
+                  type: string
+                  example: "BOFA"
+                clearingSystemId:
+                  type: string
+                  example: "FDW"
+                CertificationSuiteType:
+                  type: string
+                  example: "Certification"
+                reportStartDate:
+                  type: string
+                  format: date-time
+                  example: "2025-01-31 14:30:00.000"
+                reportEndDate:
+                  type: string
+                  format: date-time
+                  example: "2025-01-31 17:30:00.000"
+                scenarioIds:
+                  type: array
+                  items:
+                    type: string
+                  example: ["CSN49"]
+              required:
+                - tenantId
+                - entityId
+                - clearingSystemId
+      responses:
+        '200':
+          description: Certification report generation response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/generic-response'
+              examples:
+                success_response:
+                  summary: "Successful Report Generation"
+                  value:
+                    businessStatusCode: 2
+                    httpResponseCode: 200
+                    message: "The task to GenerateCertificationReport has been completed"
+                time_exceeded_response:
+                  summary: "Time Interval Exceeded"
+                  value:
+                    businessStatusCode: 1
+                    httpResponseCode: 200
+                    message: "Time interval between the Report Start and End times must not exceed 180 minutes."
+
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+        '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+  /clearing-reference/fetch-tenant-details:
+    get:
+      tags:
+        - Transaction Action APIs
+      summary: API to fetch tenant against the userId from cookie
+      description: Fetch tenant details for the authenticated user from cookie
+      responses:
+        '200':
+          description: Tenant details fetched successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Data:
+                    type: string
+                    example: "T00002"
+                  Message:
+                    type: string
+                    example: "Tenant ID fetched successfully"
+                  businessStatusCode:
+                    type: integer
+                    example: 2
+                  httpResponseCode:
+                    type: integer
+                    example: 200
+                required:
+                  - Data
+                  - Message
+                  - businessStatusCode
+                  - httpResponseCode
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 400
+                message: "bad request"
+        '401':
+          description: Unauthorized error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 401
+                message: "Unauthorized: JWT token is missing or invalid"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref:
+                  '#/components/schemas/TechnicalError'
+              example:
+                error: 500
+                message: "internal server error"
+
+
+
+
+
+
+
+
+
+
+components:
+  securitySchemes:
+    # Cookie-based authentication for main APIs
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: bearer-token-perm-internal
+      description: |
+        JWT token authentication via HTTP-only cookie.
+        
+        **Authentication Flow:**
+        1. Call `/authn/user-login/new-session` to get temporary token
+        2. Call `/authn/login-otp-validation` with OTP to get permanent token
+        3. Use permanent token cookie for all subsequent API calls
+        
+        The permanent token cookie `bearer-token-perm-internal` is automatically 
+        included in requests after successful OTP validation.
+    
+    # Temporary cookie for OTP validation step
+    tempCookieAuth:
+      type: apiKey
+      in: cookie
+      name: bearer-token-temp-internal
+      description: |
+        Temporary JWT token for OTP validation step only.
+        This token is received after initial login and used only for OTP validation.
+    
+    # Optional: Bearer token for alternative authentication
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Bearer token authentication (alternative to cookie auth)
+
+
+  schemas:
+    generic-response:
+      type: object
+      properties:
+        businessStatusCode:
+          type: integer
+          example: 2
+        httpResponseCode:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: "Response Message"
+
+    TechnicalError:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
