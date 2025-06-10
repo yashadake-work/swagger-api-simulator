@@ -264,50 +264,8 @@
         window.onload = function() {
             console.log('🚀 Initializing Swagger UI...');
             
-            // Inline YAML spec (replace with your actual YAML content)
-            const yamlSpec = `
-openapi: 3.0.3
-info:
-  title: Fednow processor action APIs
-  description: |
-    This is detailed documentation for simulator Fednow processor action APIs
-    
-    ## Successful Authentication is required to call following APIs.
-    
-    ## 🔐 Authentication Flow
-    
-    The API uses a secure two-step cookie-based authentication system:
-    
-    ### Step 1: Initial Login
-    **Endpoint**: \`POST /authn/user-login/new-session\`
-    - Send your user ID to initiate a new session
-    - Receive temporary authentication cookie (\`bearer-token-temp-internal\`)
-    - Cookie expires in 5 minutes for security
-    - OTP is sent to your registered email address
-    
-    ### Step 2: OTP Validation  
-    **Endpoint**: \`POST /authn/login-otp-validation\`
-    - Submit the OTP received via email
-    - Use the temporary cookie from Step 1
-    - Receive permanent authentication cookie (\`bearer-token-perm-internal\`)
-    - Cookie remains valid for 12 hours
-    
-    ### Step 3: API Access
-    - All protected endpoints automatically use the permanent cookie
-    - No need to manually handle authentication headers
-    - Swagger UI manages cookies automatically
-    
-    
-  version: 1.0.0
-  
-servers:
-- url: https://arthanova.cloudjiffy.net
-
-# Add your full YAML content here...
-`;
-            
             const ui = SwaggerUIBundle({
-                spec: YAML.parse(yamlSpec), // Parse YAML string
+                url: './APIs.yaml',
                 dom_id: '#swagger-ui',
                 deepLinking: true,
                 presets: [
