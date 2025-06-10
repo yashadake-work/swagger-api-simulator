@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Documentation</title>
+    <title>FedNow Processor API Documentation</title>
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui.css" />
     <style>
         html {
@@ -23,6 +23,9 @@
         }
         .swagger-ui .topbar .download-url-wrapper {
             display: none;
+        }
+        .swagger-ui .auth-wrapper {
+            display: none !important;
         }
     </style>
 </head>
@@ -47,8 +50,31 @@
                 tryItOutEnabled: true,
                 filter: true,
                 supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
+                requestInterceptor: (request) => {
+                    // Ensure credentials are included for cross-origin requests
+                    request.credentials = 'include';
+                    
+                    // Add CORS headers
+                    if (!request.headers) {
+                        request.headers = {};
+                    }
+                    request.headers['Content-Type'] = 'application/json';
+                    
+                    console.log('Request being sent:', request);
+                    return request;
+                },
+                responseInterceptor: (response) => {
+                    console.log('Response received:', response);
+                    return response;
+                },
                 onComplete: function() {
                     console.log("Swagger UI loaded successfully");
+                    
+                    // Hide the authorize button since we're using cookie auth
+                    const authSection = document.querySelector('.auth-wrapper');
+                    if (authSection) {
+                        authSection.style.display = 'none';
+                    }
                 }
             });
         };
