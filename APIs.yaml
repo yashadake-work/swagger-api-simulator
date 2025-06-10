@@ -151,7 +151,8 @@ paths:
        **Required Cookie:** `bearer-token-temp-internal` (from login step)
        **Response Cookie Set:** `bearer-token-perm-internal` (permanent token)
      security:
-       - tempCookieAuth: []
+       - tempCookieAuth: []    # Cookie option (production)
+       - tempTokenAuth: [] 
      requestBody:
        required: true
        content:
@@ -216,7 +217,8 @@ paths:
    get:
      tags: [Authentication]
      security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []   # Cookie option (production)
      summary: User Sign Out
      description: |
        Sign out user and terminate session. This will clear all authentication cookies.
@@ -259,7 +261,8 @@ paths:
       summary: Upload Transaction API
       description: Upload Transaction API
       security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
       requestBody:
         required: true
         content:
@@ -328,7 +331,8 @@ paths:
      summary: Generate System Message
      description: Generate System Message with different message sub types
      security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
      requestBody:
        required: true
        content:
@@ -527,7 +531,8 @@ paths:
      summary: Generate System Message
      description: Generate reconciliation messages with different message sub types for CAMT052 reports
      security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
      requestBody:
        required: true
        content:
@@ -645,7 +650,8 @@ paths:
      summary: Generate System Message
      description: Generate reconciliation message for FedNow Participant File (ADMI998 report)
      security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
      requestBody:
        required: true
        content:
@@ -712,7 +718,8 @@ paths:
      summary: Initiate Transaction API
      description: Initiate transactions with different message types (pacs.008.001.08, pacs.009.001.08, pain.013.001.07)
      security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
      requestBody:
        required: true
        content:
@@ -899,7 +906,8 @@ paths:
      summary: ACK Generation on Pain 013, Camt 056, Camt 055, Camt 026, Camt 029, Pacs 028, Pain 014, Camt 028 API
      description: Generate acknowledgment for various message types (Pain 013, Camt 056, Camt 055, Camt 026, Camt 029, Pacs 028, Pain 014, Camt 028)
      security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
      requestBody:
        required: true
        content:
@@ -961,7 +969,8 @@ paths:
      summary: NACK Generation on Pain 013, Camt 056, Camt 055, Camt 026, Camt 029, Pacs 028, Pain 014, Camt 028 API
      description: Generate negative acknowledgment for various message types (Pain 013, Camt 056, Camt 055, Camt 026, Camt 029, Pacs 028, Pain 014, Camt 028)
      security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
      requestBody:
        required: true
        content:
@@ -1028,7 +1037,8 @@ paths:
      summary: ACK/NACK Generation on Pacs 008, Pacs 009, Pacs 004 API
      description: Generate acknowledgment or negative acknowledgment for Pacs 008, Pacs 009, Pacs 004 messages
      security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
      requestBody:
        required: true
        content:
@@ -1101,7 +1111,8 @@ paths:
       summary: Return Request on Pacs 008 API
       description: Generate return request for Pacs 008 transactions
       security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
       requestBody:
         required: true
         content:
@@ -1172,7 +1183,8 @@ paths:
       summary: Payment Return Request on Pacs 008 API
       description: Generate payment return request for Pacs 008 transactions
       security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
       requestBody:
         required: true
         content:
@@ -1246,7 +1258,8 @@ paths:
       summary: Payment Status Request API (Pacs 008, Pacs 004)
       description: Generate payment status request for Pacs 028 and Pacs 004 transactions
       security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
       requestBody:
         required: true
         content:
@@ -1318,7 +1331,8 @@ paths:
      summary: Information Request API (Pacs 008, Pacs 004, Pain 013)
      description: Generate information request for different message types - Pacs 008, Pacs 004, and Pain 013 transactions
      security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
      requestBody:
        required: true
        content:
@@ -1433,7 +1447,8 @@ paths:
       summary: Return Request Response on Camt 056 API
       description: Generate return request response for Camt 056 messages
       security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
       requestBody:
         required: true
         content:
@@ -1509,7 +1524,8 @@ paths:
       summary: Information Request Response on Camt 026 API
       description: Generate information request response for Camt 026 messages
       security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
       requestBody:
         required: true
         content:
@@ -1588,7 +1604,8 @@ paths:
       summary: RPF cancellation Request on Pain 013 API
       description: Generate RPF cancellation request for Pain 013 transactions
       security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
       requestBody:
         required: true
         content:
@@ -1659,7 +1676,8 @@ paths:
       summary: Drawdown Response on Pain 013 API
       description: Generate drawdown response for Pain 013 transactions
       security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
       requestBody:
         required: true
         content:
@@ -1735,7 +1753,8 @@ paths:
       summary: Additional Payment Information on Camt 029 API
       description: Generate additional payment information for Camt 029 transactions
       security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
       requestBody:
         required: true
         content:
@@ -1806,7 +1825,8 @@ paths:
       summary: RPF Cancellation Request Response API
       description: Generate RPF cancellation request response
       security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
       requestBody:
         required: true
         content:
@@ -1882,7 +1902,8 @@ paths:
       summary: Certification Report Generation API
       description: Generate certification report for specified scenarios and time period
       security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
       requestBody:
         required: true
         content:
@@ -1978,7 +1999,8 @@ paths:
       summary: API to fetch tenant against the userId from cookie
       description: Fetch tenant details for the authenticated user from cookie
       security:
-       - cookieAuth: []
+       - cookieAuth: []   # Cookie option (production)
+       - headerAuth: []
       responses:
         '200':
           description: Tenant details fetched successfully
@@ -2046,32 +2068,56 @@ paths:
 
 components:
   securitySchemes:
-    # Cookie-based authentication for main APIs
+    # Cookie-based authentication for main APIs (Production)
     cookieAuth:
       type: apiKey
       in: cookie
       name: bearer-token-perm-internal
       description: |
         JWT token authentication via HTTP-only cookie.
-        
         **Authentication Flow:**
         1. Call `/authn/user-login/new-session` to get temporary token
         2. Call `/authn/login-otp-validation` with OTP to get permanent token
         3. Use permanent token cookie for all subsequent API calls
-        
-        The permanent token cookie `bearer-token-perm-internal` is automatically 
+        The permanent token cookie `bearer-token-perm-internal` is automatically
         included in requests after successful OTP validation.
-    
-    # Temporary cookie for OTP validation step
+    # Header-based authentication for Swagger UI testing
+    headerAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: |
+        JWT token authentication via Authorization header for testing.
+        **Format:** `Bearer <your-jwt-token>`
+        **How to use:**
+        1. Complete the authentication flow to get your JWT token
+        2. Click the 🔒 Authorize button
+        3. Enter: `Bearer <your-token-here>`
+        4. Click Authorize
+    # Temporary token for OTP validation step (Testing)
+    tempTokenAuth:
+      type: apiKey
+      in: header
+      name: X-Temp-Token
+      description: |
+        Temporary JWT token for OTP validation step.
+        **How to get the token:**
+        1. Call `/authn/user-login/new-session` first
+        2. Copy the token value from the `Set-Cookie` response header
+        3. Extract only the token part: `bearer-token-temp-internal=TOKEN_VALUE`
+        4. Use the TOKEN_VALUE here
+        **Example:** If Set-Cookie shows:
+        `bearer-token-temp-internal=eyJhbGciOiJSUzI1NiI...`
+        Then use: `eyJhbGciOiJSUzI1NiI...`
+    # Original cookie auth for documentation
     tempCookieAuth:
       type: apiKey
       in: cookie
       name: bearer-token-temp-internal
       description: |
-        Temporary JWT token for OTP validation step only.
-        This token is received after initial login and used only for OTP validation.
-
-
+        Temporary JWT token cookie for OTP validation step (Production).
+        This cookie is automatically set after calling the login endpoint.
+ 
   schemas:
     generic-response:
       type: object
@@ -2085,11 +2131,16 @@ components:
         message:
           type: string
           example: "Response Message"
-
     TechnicalError:
       type: object
       properties:
         error:
           type: string
+          example: "VALIDATION_ERROR"
         message:
           type: string
+          example: "Invalid request parameters"
+        details:
+          type: string
+          example: "Additional error details"
+          description: "Optional field with more specific error information"
