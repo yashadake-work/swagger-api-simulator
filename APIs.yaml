@@ -151,7 +151,7 @@ paths:
        **Required Cookie:** `bearer-token-temp-internal` (from login step)
        **Response Cookie Set:** `bearer-token-perm-internal` (permanent token)
      security:
-        - tempCookieAuth: []  # Requires temporary token cookie
+       - tempCookieAuth: []
      requestBody:
        required: true
        content:
@@ -215,6 +215,8 @@ paths:
   /clearing-reference/sign-out:
    get:
      tags: [Authentication]
+     security:
+       - cookieAuth: []
      summary: User Sign Out
      description: |
        Sign out user and terminate session. This will clear all authentication cookies.
@@ -256,6 +258,8 @@ paths:
         - Upload Transaction
       summary: Upload Transaction API
       description: Upload Transaction API
+      security:
+       - cookieAuth: []
       requestBody:
         required: true
         content:
@@ -323,6 +327,8 @@ paths:
       - Generate System Message
      summary: Generate System Message
      description: Generate System Message with different message sub types
+     security:
+       - cookieAuth: []
      requestBody:
        required: true
        content:
@@ -520,6 +526,8 @@ paths:
       - Generate System Message
      summary: Generate System Message
      description: Generate reconciliation messages with different message sub types for CAMT052 reports
+     security:
+       - cookieAuth: []
      requestBody:
        required: true
        content:
@@ -636,6 +644,8 @@ paths:
       - Generate System Message
      summary: Generate System Message
      description: Generate reconciliation message for FedNow Participant File (ADMI998 report)
+     security:
+       - cookieAuth: []
      requestBody:
        required: true
        content:
@@ -701,6 +711,8 @@ paths:
       - Initiate Transaction
      summary: Initiate Transaction API
      description: Initiate transactions with different message types (pacs.008.001.08, pacs.009.001.08, pain.013.001.07)
+     security:
+       - cookieAuth: []
      requestBody:
        required: true
        content:
@@ -886,6 +898,8 @@ paths:
       - Transaction Action APIs
      summary: ACK Generation on Pain 013, Camt 056, Camt 055, Camt 026, Camt 029, Pacs 028, Pain 014, Camt 028 API
      description: Generate acknowledgment for various message types (Pain 013, Camt 056, Camt 055, Camt 026, Camt 029, Pacs 028, Pain 014, Camt 028)
+     security:
+       - cookieAuth: []
      requestBody:
        required: true
        content:
@@ -946,6 +960,8 @@ paths:
       - Transaction Action APIs
      summary: NACK Generation on Pain 013, Camt 056, Camt 055, Camt 026, Camt 029, Pacs 028, Pain 014, Camt 028 API
      description: Generate negative acknowledgment for various message types (Pain 013, Camt 056, Camt 055, Camt 026, Camt 029, Pacs 028, Pain 014, Camt 028)
+     security:
+       - cookieAuth: []
      requestBody:
        required: true
        content:
@@ -1011,6 +1027,8 @@ paths:
       - Transaction Action APIs
      summary: ACK/NACK Generation on Pacs 008, Pacs 009, Pacs 004 API
      description: Generate acknowledgment or negative acknowledgment for Pacs 008, Pacs 009, Pacs 004 messages
+     security:
+       - cookieAuth: []
      requestBody:
        required: true
        content:
@@ -1082,6 +1100,8 @@ paths:
         - Transaction Action APIs
       summary: Return Request on Pacs 008 API
       description: Generate return request for Pacs 008 transactions
+      security:
+       - cookieAuth: []
       requestBody:
         required: true
         content:
@@ -1151,6 +1171,8 @@ paths:
         - Transaction Action APIs
       summary: Payment Return Request on Pacs 008 API
       description: Generate payment return request for Pacs 008 transactions
+      security:
+       - cookieAuth: []
       requestBody:
         required: true
         content:
@@ -1223,6 +1245,8 @@ paths:
         - Transaction Action APIs
       summary: Payment Status Request API (Pacs 008, Pacs 004)
       description: Generate payment status request for Pacs 028 and Pacs 004 transactions
+      security:
+       - cookieAuth: []
       requestBody:
         required: true
         content:
@@ -1293,6 +1317,8 @@ paths:
       - Transaction Action APIs
      summary: Information Request API (Pacs 008, Pacs 004, Pain 013)
      description: Generate information request for different message types - Pacs 008, Pacs 004, and Pain 013 transactions
+     security:
+       - cookieAuth: []
      requestBody:
        required: true
        content:
@@ -1406,6 +1432,8 @@ paths:
         - Transaction Action APIs
       summary: Return Request Response on Camt 056 API
       description: Generate return request response for Camt 056 messages
+      security:
+       - cookieAuth: []
       requestBody:
         required: true
         content:
@@ -1480,6 +1508,8 @@ paths:
         - Transaction Action APIs
       summary: Information Request Response on Camt 026 API
       description: Generate information request response for Camt 026 messages
+      security:
+       - cookieAuth: []
       requestBody:
         required: true
         content:
@@ -1557,6 +1587,8 @@ paths:
         - Transaction Action APIs
       summary: RPF cancellation Request on Pain 013 API
       description: Generate RPF cancellation request for Pain 013 transactions
+      security:
+       - cookieAuth: []
       requestBody:
         required: true
         content:
@@ -1626,6 +1658,8 @@ paths:
         - Transaction Action APIs
       summary: Drawdown Response on Pain 013 API
       description: Generate drawdown response for Pain 013 transactions
+      security:
+       - cookieAuth: []
       requestBody:
         required: true
         content:
@@ -1700,6 +1734,8 @@ paths:
         - Transaction Action APIs
       summary: Additional Payment Information on Camt 029 API
       description: Generate additional payment information for Camt 029 transactions
+      security:
+       - cookieAuth: []
       requestBody:
         required: true
         content:
@@ -1769,6 +1805,8 @@ paths:
         - Transaction Action APIs
       summary: RPF Cancellation Request Response API
       description: Generate RPF cancellation request response
+      security:
+       - cookieAuth: []
       requestBody:
         required: true
         content:
@@ -1843,6 +1881,8 @@ paths:
         - Transaction Action APIs
       summary: Certification Report Generation API
       description: Generate certification report for specified scenarios and time period
+      security:
+       - cookieAuth: []
       requestBody:
         required: true
         content:
@@ -1937,6 +1977,8 @@ paths:
         - Transaction Action APIs
       summary: API to fetch tenant against the userId from cookie
       description: Fetch tenant details for the authenticated user from cookie
+      security:
+       - cookieAuth: []
       responses:
         '200':
           description: Tenant details fetched successfully
@@ -2028,13 +2070,6 @@ components:
       description: |
         Temporary JWT token for OTP validation step only.
         This token is received after initial login and used only for OTP validation.
-    
-    # Optional: Bearer token for alternative authentication
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: JWT Bearer token authentication (alternative to cookie auth)
 
 
   schemas:
