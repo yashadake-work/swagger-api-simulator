@@ -24,16 +24,182 @@
         .swagger-ui .topbar .download-url-wrapper {
             display: none;
         }
-        .swagger-ui .auth-wrapper {
-            display: none !important;
+        
+        /* Token management panel */
+        .token-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #fff;
+            border: 2px solid #2c3e50;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 9999;
+            max-width: 300px;
+            font-family: Arial, sans-serif;
+        }
+        
+        .token-panel h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+        
+        .token-panel input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .token-panel button {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 2px;
+        }
+        
+        .token-panel button:hover {
+            background: #34495e;
+        }
+        
+        .status {
+            font-size: 11px;
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        
+        .token-panel .minimize {
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .token-panel.minimized {
+            height: 40px;
+            overflow: hidden;
         }
     </style>
 </head>
 <body>
+    <!-- Token Management Panel -->
+    <div id="tokenPanel" class="token-panel">
+        <button class="minimize" onclick="togglePanel()">−</button>
+        <h3>🔐 Token Manager</h3>
+        <div class="content">
+            <input type="text" id="tempToken" placeholder="Paste temp token here" />
+            <button onclick="setTempToken()">Set Temp Token</button>
+            
+            <input type="text" id="permToken" placeholder="Paste permanent token here" />
+            <button onclick="setPermToken()">Set Perm Token</button>
+            
+            <button onclick="clearTokens()">Clear All</button>
+            
+            <div id="status" class="status info">
+                Ready to set tokens manually
+            </div>
+        </div>
+    </div>
+
     <div id="swagger-ui"></div>
+    
     <script src="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui-bundle.js"></script>
     <script src="https://unpkg.com/swagger-ui-dist@5.10.3/swagger-ui-standalone-preset.js"></script>
     <script>
+        // Token storage
+        let currentTempToken = '';
+        let currentPermToken = '';
+        
+        // UI Functions
+        function togglePanel() {
+            const panel = document.getElementById('tokenPanel');
+            const btn = panel.querySelector('.minimize');
+            panel.classList.toggle('minimized');
+            btn.textContent = panel.classList.contains('minimized') ? '+' : '−';
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        
+        function setTempToken() {
+            const token = document.getElementById('tempToken').value.trim();
+            if (token) {
+                currentTempToken = token;
+                // Try to set as cookie too
+                document.cookie = `bearer-token-temp-internal=${token}; path=/; secure; samesite=none`;
+                updateStatus('✅ Temp token set successfully', 'success');
+            } else {
+                updateStatus('❌ Please enter a token', 'error');
+            }
+        }
+        
+        function setPermToken() {
+            const token = document.getElementById('permToken').value.trim();
+            if (token) {
+                currentPermToken = token;
+                // Try to set as cookie too
+                document.cookie = `bearer-token-perm-internal=${token}; path=/; secure; samesite=none`;
+                updateStatus('✅ Permanent token set successfully', 'success');
+            } else {
+                updateStatus('❌ Please enter a token', 'error');
+            }
+        }
+        
+        function clearTokens() {
+            currentTempToken = '';
+            currentPermToken = '';
+            document.getElementById('tempToken').value = '';
+            document.getElementById('permToken').value = '';
+            // Clear cookies
+            document.cookie = 'bearer-token-temp-internal=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            document.cookie = 'bearer-token-perm-internal=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            updateStatus('🧹 All tokens cleared', 'info');
+        }
+        
+        // Auto-extract tokens from responses
+        function extractTokenFromResponse(response) {
+            const setCookieHeader = response.headers.get('set-cookie');
+            if (setCookieHeader) {
+                if (setCookieHeader.includes('bearer-token-temp-internal')) {
+                    const match = setCookieHeader.match(/bearer-token-temp-internal=([^;]+)/);
+                    if (match) {
+                        currentTempToken = match[1];
+                        document.getElementById('tempToken').value = currentTempToken;
+                        updateStatus('🎯 Auto-extracted temp token!', 'success');
+                    }
+                }
+                if (setCookieHeader.includes('bearer-token-perm-internal')) {
+                    const match = setCookieHeader.match(/bearer-token-perm-internal=([^;]+)/);
+                    if (match) {
+                        currentPermToken = match[1];
+                        document.getElementById('permToken').value = currentPermToken;
+                        updateStatus('🎯 Auto-extracted permanent token!', 'success');
+                    }
+                }
+            }
+        }
+        
+        // Initialize Swagger UI
         window.onload = function() {
             const ui = SwaggerUIBundle({
                 url: './APIs.yaml',
@@ -51,30 +217,48 @@
                 filter: true,
                 supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch'],
                 requestInterceptor: (request) => {
-                    // Ensure credentials are included for cross-origin requests
+                    // Always include credentials
                     request.credentials = 'include';
                     
-                    // Add CORS headers
-                    if (!request.headers) {
-                        request.headers = {};
+                    // Add manual tokens to cookies if available
+                    if (currentTempToken || currentPermToken) {
+                        let cookieHeader = '';
+                        
+                        // For OTP validation, use temp token
+                        if (request.url.includes('/login-otp-validation') && currentTempToken) {
+                            cookieHeader = `bearer-token-temp-internal=${currentTempToken}`;
+                            updateStatus('🔄 Using temp token for OTP validation', 'info');
+                        }
+                        // For other APIs, use permanent token
+                        else if (!request.url.includes('/user-login/new-session') && currentPermToken) {
+                            cookieHeader = `bearer-token-perm-internal=${currentPermToken}`;
+                            updateStatus('🔄 Using permanent token', 'info');
+                        }
+                        
+                        if (cookieHeader) {
+                            if (!request.headers) request.headers = {};
+                            request.headers['Cookie'] = cookieHeader;
+                        }
                     }
-                    request.headers['Content-Type'] = 'application/json';
                     
-                    console.log('Request being sent:', request);
+                    console.log('🚀 Request:', request.url, request);
                     return request;
                 },
                 responseInterceptor: (response) => {
-                    console.log('Response received:', response);
+                    console.log('📥 Response:', response);
+                    
+                    // Try to auto-extract tokens
+                    try {
+                        extractTokenFromResponse(response);
+                    } catch (e) {
+                        console.log('Token extraction failed:', e);
+                    }
+                    
                     return response;
                 },
                 onComplete: function() {
-                    console.log("Swagger UI loaded successfully");
-                    
-                    // Hide the authorize button since we're using cookie auth
-                    const authSection = document.querySelector('.auth-wrapper');
-                    if (authSection) {
-                        authSection.style.display = 'none';
-                    }
+                    console.log("✅ Swagger UI loaded successfully");
+                    updateStatus('🚀 Swagger UI ready - set tokens above', 'info');
                 }
             });
         };
