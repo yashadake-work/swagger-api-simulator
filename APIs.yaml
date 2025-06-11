@@ -2098,7 +2098,7 @@ components:
     tempTokenAuth:
       type: apiKey
       in: header
-      name: X-Temp-Token
+      name: Set-Cookie
       description: |
         Temporary JWT token for OTP validation step.
         **How to get the token:**
